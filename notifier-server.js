@@ -19,7 +19,7 @@ var root = require( "path" ).dirname( __filename ),
 	server = require( "git-notifier" ).createServer(),
 	fs = require( "fs" ),
 	proc = require( "child_process" ),
-	logger = require( "logger" ).init( "notify-server" );
+	logger = require( "logger" ).init( "notifier-server" );
 
 directory = argv.d;
 
@@ -29,17 +29,25 @@ if ( argv.h ) {
 }
 
 function makeExec( filename ) {
+
+	function doLog( method, prefix, text ) {
+		var parts = ("" + text).split(/\n/);
+		parts.forEach(function( line ) {
+			logger[ method ]( prefix + line );
+		});
+	}
+
 	return function( data ) {
 		logger.log( "spawn: ", filename, data.commit );
 		proc.exec( directory + "/" + filename + " " + data.commit, function( error, stdout, stderr ) {
 			if ( stdout ) {
-				logger.log( filename + ":out:" + stdout );        
+				doLog( "log", filename + ":out:", stdout );
 			}
 			if ( stderr ) {
-				logger.log( filename + ":err:" + stderr );
+				doLog( "log", filename + ":err:", stderr );
 			}
 			if ( error ) {
-				logger.error( filename + ":error:" + error );
+				doLog( "error", filename + ":error:", error );
 			}
 		});
 	}
