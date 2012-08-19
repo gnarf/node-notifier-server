@@ -40,7 +40,7 @@ function makeExec( filename ) {
 	}
 
 	return function( data ) {
-		logger.log( "spawn: ", filename, data.commit );
+		logger.log( "spawn: " + filename + " " + data.commit );
 		proc.exec( directory + "/" + filename + " " + data.commit, function( error, stdout, stderr ) {
 			if ( stdout ) {
 				doLog( "log", filename + ":out:", stdout );
