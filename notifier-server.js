@@ -33,7 +33,9 @@ function makeExec( filename ) {
 	function doLog( method, prefix, text ) {
 		var parts = ("" + text).split(/\n/);
 		parts.forEach(function( line ) {
-			logger[ method ]( prefix + line );
+			if ( line.length ) {
+				logger[ method ]( prefix + line );
+			}
 		});
 	}
 
