@@ -73,5 +73,5 @@ server.on( "error", function ( err ) {
 	logger.error( "Error:", err );
 });
 
-logger.log( "Setting up post-receive server on port", port );
+logger.log( "Setting up post-receive server on port " + port );
 server.listen( port );
