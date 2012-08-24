@@ -19,7 +19,8 @@ var root = require( "path" ).dirname( __filename ),
 	server = require( "git-notifier" ).createServer(),
 	fs = require( "fs" ),
 	proc = require( "child_process" ),
-	logger = require( "logger" ).init( "notifier-server" );
+	logger = require( "logger" ).init( "notifier-server" ),
+	invalidSHA = /[^0-9a-f]/;
 
 directory = argv.d;
 
@@ -40,17 +41,20 @@ function makeExec( filename ) {
 	}
 
 	return function( data ) {
+		if ( invalidSHA.test( data.commit ) ) {
+			logger.log( "Bad Request " + JSON.encode( data ) );
+			return
+		}
 		logger.log( "spawn: " + filename + " " + data.commit );
-		proc.exec( directory + "/" + filename + " " + data.commit, function( error, stdout, stderr ) {
-			if ( stdout ) {
-				doLog( "log", filename + ":out:", stdout );
-			}
-			if ( stderr ) {
-				doLog( "log", filename + ":err:", stderr );
-			}
-			if ( error ) {
-				doLog( "error", filename + ":error:", error );
-			}
+		var process = proc.spawn( directory + "/" + filename, [ data.commit ] );
+		process.stdout.on( "data", function( data ) {
+			doLog( "log", filename + ":out:", data );
+		});
+		process.stderr.on( "data", function( data ) {
+			doLog( "log", filename + ":err:", data );
+		});
+		process.on( "exit", function( code ) {
+			doLog( "log", filename + ":exit:", code );
 		});
 	}
 }
