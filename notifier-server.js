@@ -19,7 +19,7 @@ var root = require( "path" ).dirname( __filename ),
 	server = require( "git-notifier" ).createServer(),
 	fs = require( "fs" ),
 	proc = require( "child_process" ),
-	logger = require( "logger" ).init( "notifier-server" ),
+	logger = require( "simple-log" ).init( "notifier-server" ),
 	invalidSHA = /[^0-9a-f]/;
 
 directory = argv.d;

@@ -15,7 +15,7 @@
   "dependencies": {
     "git-notifier": "1.0.0",
     "optimist": "0.3.4",
-    "logger": "git://github.com/jquery/node-logger.git"
+    "simple-log": "1.0.0"
   },
   "devDependencies": {},
   "optionalDependencies": {}
