@@ -1,16 +1,17 @@
-var root = require( "path" ).dirname( __filename ),
+var mailer,
+	root = require( "path" ).dirname( __filename ),
 	directory = root + "/notifier.d",
 
 	opts = require( "optimist" )
 		.usage( "Start a server to listen for github post receives and execute scripts from a directory\n\t$0" )
 		.options( "p", {
 			alias: "port",
-			default: 3333,
+			"default": 3333,
 			describe: "Port number for server"
 		})
 		.options( "d", {
 			alias: "directory",
-			default: directory,
+			"default": directory
 		})
 		.boolean( "console" )
 		.describe( "console", "Log to console instead of syslog" );
@@ -21,6 +22,11 @@ var root = require( "path" ).dirname( __filename ),
 	proc = require( "child_process" ),
 	logger = require( "simple-log" ).init( "notifier-server" ),
 	invalidSHA = /[^0-9a-f]/;
+
+if ( fs.existsSync( "./mail-config.json" ) ) {
+	logger.log( "Loading E-Mail Component" );
+	mailer = require( "./notify-mail.js" );
+}
 
 directory = argv.d;
 
@@ -41,21 +47,29 @@ function makeExec( filename ) {
 	}
 
 	return function( data ) {
+		var output = "",
+			exit = -1;
 		if ( invalidSHA.test( data.commit ) ) {
 			logger.log( "Bad Request " + JSON.encode( data ) );
-			return
+			return;
 		}
 		logger.log( "spawn: " + filename + " " + data.commit );
 		var process = proc.spawn( directory + "/" + filename, [ data.commit ] );
 		process.stdout.on( "data", function( data ) {
+			output += data;
 			doLog( "log", filename + ":out:", data );
 		});
 		process.stderr.on( "data", function( data ) {
+			output += data;
 			doLog( "log", filename + ":err:", data );
 		});
 		process.on( "exit", function( code ) {
+			exit = code;
 			doLog( "log", filename + ":exit:", code );
 		});
+		process.on( "close", function() {
+			mailer( "Deployment: " + filename + " " + data.commit, output + "Exit Code: " + exit );
+		})
 	}
 }
 
