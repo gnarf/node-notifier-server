@@ -1,7 +1,7 @@
 var mailer,
 	root = require( "path" ).dirname( __filename ),
 	directory = root + "/notifier.d",
-
+	os = require( "os" ),
 	opts = require( "optimist" )
 		.usage( "Start a server to listen for github post receives and execute scripts from a directory\n\t$0" )
 		.options( "p", {
@@ -68,9 +68,9 @@ function makeExec( filename ) {
 			doLog( "log", filename + ":exit:", code );
 		});
 		process.on( "close", function() {
-			mailer( "Deployment: " + filename + " " + data.commit, output + "Exit Code: " + exit );
-		})
-	}
+			mailer( os.hostname() + ": Deployment: " + filename + " " + data.commit, output + "Exit Code: " + exit );
+		});
+	};
 }
 
 fs.readdirSync( directory ).forEach( function( file ) {
