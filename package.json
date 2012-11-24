@@ -2,7 +2,7 @@
   "author": "Corey Frang <gnarf37@gmail.com> (http://gnarf.net)",
   "name": "notifier-server",
   "description": "A simple git-notifier server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "https://github.com/gnarf37/node-notifier-server",
   "repository": {
     "type": "git",
@@ -16,7 +16,7 @@
     "git-notifier": "1.0.0",
     "optimist": "0.3.4",
     "simple-log": "1.0.0",
-    "node-mailer": "0.3.31"
+    "nodemailer": "0.3.31"
   },
   "devDependencies": {},
   "optionalDependencies": {}
