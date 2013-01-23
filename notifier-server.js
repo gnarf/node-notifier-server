@@ -26,6 +26,9 @@ var mailer,
 if ( fs.existsSync( "./mail-config.json" ) ) {
 	logger.log( "Loading E-Mail Component" );
 	mailer = require( "./notify-mail.js" );
+} else {
+	// without mail config, mailer is a noop
+	mailer = function() {};
 }
 
 directory = argv.d;
