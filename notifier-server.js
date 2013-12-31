@@ -71,7 +71,12 @@ function makeExec( filename ) {
 			doLog( "log", filename + ":exit:", code );
 		});
 		process.on( "close", function() {
-			mailer( os.hostname() + ": Deployment: " + filename + " " + data.commit, output + "Exit Code: " + exit );
+			var subject = os.hostname() + ": ";
+			if (exit) {
+				subject += "FAILED ";
+			}
+			subject += "Deployment: " + filename + " " + data.commit;
+			mailer( subject, output + "\nExit Code: " + exit );
 		});
 	};
 }
