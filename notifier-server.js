@@ -13,18 +13,31 @@ var mailer,
 			alias: "directory",
 			"default": directory
 		})
-		.boolean( "console" )
-		.describe( "console", "Log to console instead of syslog" );
+		.boolean( "debug" )
+		.describe( "debug", "Enable Debug" ),
 	argv = opts.argv,
 	port = argv.p,
-	server = require( "git-notifier" ).createServer(),
+	http = require( "http" ),
+	Notifier = require( "git-notifier" ).Notifier,
+	notifier = new Notifier(),
+	server = http.createServer(),
 	fs = require( "fs" ),
-	proc = require( "child_process" ),
-	logger = require( "simple-log" ).init( "notifier-server" ),
+	proc = require( "child_process" );
+var debug = require( "debug" );
+var async = require( "async" );
+
+if (argv.debug) {
+	debug.enable( "notifier-server:*" );
+}
+
+debug.enable( "notifier-server:error" );
+var error = debug( "notifier-server:error" );
+
+var log = debug( "notifier-server:server" ),
 	invalidSHA = /[^0-9a-f]/;
 
 if ( fs.existsSync( "./mail-config.json" ) ) {
-	logger.log( "Loading E-Mail Component" );
+	log( "Loading E-Mail Component" );
 	mailer = require( "./notify-mail.js" );
 } else {
 	// without mail config, mailer is a noop
@@ -39,45 +52,55 @@ if ( argv.h ) {
 }
 
 function makeExec( filename ) {
-
-	function doLog( method, prefix, text ) {
-		var parts = ("" + text).split(/\n/);
-		parts.forEach(function( line ) {
-			if ( line.length ) {
-				logger[ method ]( prefix + line );
-			}
-		});
-	}
-
-	return function( data ) {
+	var log = debug( "notifier-server:script:" + filename );
+	var queue = async.queue(function spawn(commit, callback) {
+		log( "spawn", commit );
 		var output = "",
 			exit = -1;
-		if ( invalidSHA.test( data.commit ) ) {
-			logger.log( "Bad Request " + JSON.encode( data ) );
-			return;
-		}
-		logger.log( "spawn: " + filename + " " + data.commit );
-		var process = proc.spawn( directory + "/" + filename, [ data.commit ] );
+
+		var process = proc.spawn( directory + "/" + filename, [ commit ] );
 		process.stdout.on( "data", function( data ) {
 			output += data;
-			doLog( "log", filename + ":out:", data );
+			doLog( "out", data );
 		});
 		process.stderr.on( "data", function( data ) {
 			output += data;
-			doLog( "log", filename + ":err:", data );
+			doLog( "err", data );
 		});
 		process.on( "exit", function( code ) {
 			exit = code;
-			doLog( "log", filename + ":exit:", code );
+			log( "exit", code );
 		});
 		process.on( "close", function() {
 			var subject = os.hostname() + ": ";
 			if (exit) {
 				subject += "FAILED ";
 			}
-			subject += "Deployment: " + filename + " " + data.commit;
+			subject += "Deployment: " + filename + " " + commit;
 			mailer( subject, output + "\nExit Code: " + exit );
+			callback( null, { output: output, exit: exit });
 		});
+	});
+
+	queue.drain = function() { log( "done" ); };
+
+	function doLog( prefix, text ) {
+		var parts = ("" + text).split(/\n/);
+		parts.forEach(function( line ) {
+			if ( line.length ) {
+				log( prefix, line );
+			}
+		});
+	}
+
+	return function( data ) {
+		if ( invalidSHA.test( data.commit ) ) {
+			log( "Bad Request", data );
+			return;
+		}
+
+		log( "queue", data.commit );
+		queue.push( data.commit );
 	};
 }
 
@@ -85,15 +108,15 @@ fs.readdirSync( directory ).forEach( function( file ) {
 	if ( !/\.js$/.exec( file ) ) {
 		return;
 	}
-	logger.log( "Including " + directory + "/" + file );
+	log( "Including " + directory + "/" + file );
 	var js = directory + "/" + file,
 		sh = file.replace( /\.js$/, ".sh" );
-	require( js )( server, makeExec( sh ) );
+	require( js )( notifier, makeExec( sh ) );
 });
 
-server.on( "error", function ( err ) {
-	logger.error( "Error:", err );
-});
+server.on( "request", notifier.handler );
+server.on( "error", error );
+notifier.on( "error", error );
 
-logger.log( "Setting up post-receive server on port " + port );
+log( "Setting up post-receive server on port " + port );
 server.listen( port );
