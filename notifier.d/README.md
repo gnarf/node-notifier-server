@@ -6,7 +6,7 @@ Examples:
 ## notifier.js
 ```javascript
 module.exports = function( server, exec ) {
-  server.on( "scottgonzalez/node-git-notifier/heads/master", exec );
+  server.on( "scottgonzalez/node-git-notifier/push/heads/master", exec );
 };
 ```
 
