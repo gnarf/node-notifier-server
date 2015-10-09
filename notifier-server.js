@@ -53,10 +53,12 @@ if ( argv.h ) {
 
 function makeExec( filename ) {
 	var log = debug( "notifier-server:script:" + filename );
-	var queue = async.queue(function spawn(commit, callback) {
+	var queue = async.queue(function spawn(eventData, callback) {
+		var commit = eventData.commit;
 		log( "spawn", commit );
 		var output = "",
-			exit = -1;
+			exit = -1,
+			started = Date.now();
 
 		var process = proc.spawn( directory + "/" + filename, [ commit ] );
 		process.stdout.on( "data", function( data ) {
@@ -76,9 +78,9 @@ function makeExec( filename ) {
 			if (exit) {
 				subject += "FAILED ";
 			}
-			subject += "Deployment: " + filename + " " + commit;
+			subject += "Deployment: " + filename + " " + commit + " " + ((Date.now() - started)/1000).toFixed(0) + "s";
 			mailer( subject, output + "\nExit Code: " + exit );
-			callback( null, { output: output, exit: exit });
+			callback( null, { subject: subject, filename: filename, eventData: eventData, output: output, exit: exit, time: Date.now() - started, started: started });
 		});
 	});
 
@@ -93,14 +95,18 @@ function makeExec( filename ) {
 		});
 	}
 
-	return function( data ) {
+	return function( data, callback ) {
 		if ( invalidSHA.test( data.commit ) ) {
 			log( "Bad Request", data );
 			return;
 		}
 
 		log( "queue", data.commit );
-		queue.push( data.commit );
+		if (callback) {
+			queue.push( data, callback );
+		} else {
+			queue.push( data );
+		}
 	};
 }
 
